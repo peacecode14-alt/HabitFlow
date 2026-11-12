@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101820">
+  <meta name="description" content="HabitFlow helps you build better habits, one day at a time.">
+  <title>HabitFlow — Build Better Habits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#" aria-label="HabitFlow home">
+        <span class="brand-mark">H</span><span class="brand-name">HabitFlow</span>
+      </a>
+      <div class="sidebar-label" data-i18n="workspace">WORKSPACE</div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <button class="nav-link active" data-view="dashboard"><span class="nav-icon">⌂</span><span
+            data-i18n="dashboard">Dashboard</span></button>
+        <button class="nav-link" data-view="habits"><span class="nav-icon">◈</span><span data-i18n="myHabits">My
+            habits</span></button>
+        <button class="nav-link" data-view="calendar"><span class="nav-icon">▦</span><span
+            data-i18n="calendar">Calendar</span></button>
+        <button class="nav-link" data-view="statistics"><span class="nav-icon">▥</span><span
+            data-i18n="statistics">Statistics</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-label" data-i18n="preferences">PREFERENCES</div>
+        <button class="nav-link" data-view="settings"><span class="nav-icon">⚙</span><span
+            data-i18n="settings">Settings</span></button>
+        <div class="sidebar-note">
+          <span class="note-spark">✦</span>
+          <strong data-i18n="smallSteps">Small steps, big changes.</strong>
+          <p data-i18n="consistencyNote">Consistency is built one day at a time.</p>
+        </div>
+        <div class="profile-row">
+          <div class="avatar">M</div>
+          <div><strong data-i18n="yourSpace">Your space</strong><small data-i18n="personalJourney">Personal
+              journey</small></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu icon-button" id="mobileMenu" aria-label="Open menu">☰</button>
+        <div class="breadcrumb"><span data-i18n="workspace">WORKSPACE</span><b>/</b><strong
+            id="pageTitle">Dashboard</strong></div>
+        <div class="topbar-actions">
+          <span class="today-label" id="topDate"></span>
+          <button class="icon-button" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">☼</button>
+          <button class="language-button" id="languageToggle">العربية</button>
+        </div>
+      </header>
+
+      <section class="view active" id="dashboardView">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow" data-i18n="overview">YOUR PERSONAL OVERVIEW</p>
+            <h1><span data-i18n="goodMorning">Good morning</span><span class="wave"> ✦</span></h1>
+            <p class="muted" data-i18n="welcomeSubtitle">A little progress each day adds up to big results.</p>
+          </div>
+          <button class="primary-button" id="addHabitBtn"><span>＋</span><span data-i18n="addHabit">Add
+              habit</span></button>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="dashboard-grid">
+          <section class="panel habits-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-i18n="dailyFocus">DAILY FOCUS</p>
+                <h2 data-i18n="todaysHabits">Today's habits</h2>
+              </div><button class="text-button" data-go="habits"><span data-i18n="viewAll">View all</span> ↗</button>
+            </div>
+            <div id="todayHabits" class="habit-list"></div>
+          </section>
+          <section class="panel weekly-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-i18n="yourConsistency">YOUR CONSISTENCY</p>
+                <h2 data-i18n="weeklyActivity">Weekly activity</h2>
+              </div><span class="live-dot"></span>
+            </div>
+            <div id="weeklyChart" class="weekly-chart"></div>
+            <div class="chart-legend"><span><i></i><span data-i18n="completed">Completed</span></span><span><i></i><span
+                  data-i18n="notCompleted">Not completed</span></span></div>
+          </section>
+        </div>
+        <section class="panel quote-panel"><span class="quote-mark">“</span>
+          <div>
+            <p data-i18n="quote">You do not rise to the level of your goals. You fall to the level of your systems.</p>
+            <small>— James Clear</small>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="habitsView">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow" data-i18n="buildYourRoutine">BUILD YOUR ROUTINE</p>
+            <h1 data-i18n="myHabits">My habits</h1>
+            <p class="muted" data-i18n="habitsSubtitle">Create a routine that works for you.</p>
+          </div><button class="primary-button" id="addHabitBtn2">＋ <span data-i18n="addHabit">Add habit</span></button>
+        </div>
+        <div class="filter-row">
+          <div class="filter-tabs" id="habitFilters"><button class="filter-tab active" data-filter="all"
+              data-i18n="all">All</button><button class="filter-tab" data-filter="active"
+              data-i18n="active">Active</button><button class="filter-tab" data-filter="completed"
+              data-i18n="completedToday">Completed today</button></div><span class="muted small" id="habitCount"></span>
+        </div>
+        <div class="panel">
+          <div id="allHabits" class="habit-list full-list"></div>
+        </div>
+      </section>
+
+      <section class="view" id="calendarView">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow" data-i18n="lookBack">LOOK BACK, MOVE FORWARD</p>
+            <h1 data-i18n="calendar">Calendar</h1>
+            <p class="muted" data-i18n="calendarSubtitle">Your consistency, day by day.</p>
+          </div>
+        </div>
+        <section class="panel calendar-panel">
+          <div class="calendar-header"><button class="icon-button" id="prevMonth">‹</button>
+            <h2 id="calendarMonth"></h2><button class="icon-button" id="nextMonth">›</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <div class="calendar-legend"><span><i class="legend-complete"></i><span data-i18n="someHabitsDone">Some habits
+                completed</span></span><span><i class="legend-perfect"></i><span data-i18n="allHabitsDone">All habits
+                completed</span></span></div>
+        </section>
+      </section>
+
+      <section class="view" id="statisticsView">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow" data-i18n="yourProgress">YOUR PROGRESS</p>
+            <h1 data-i18n="statistics">Statistics</h1>
+            <p class="muted" data-i18n="statisticsSubtitle">Understand your progress and celebrate consistency.</p>
+          </div>
+        </div>
+        <div class="stats-grid" id="statisticsSummary"></div>
+        <div class="stats-detail-grid">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-i18n="lastSevenDays">LAST 7 DAYS</p>
+                <h2 data-i18n="completionTrend">Completion trend</h2>
+              </div>
+            </div>
+            <div id="statsChart" class="weekly-chart tall-chart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-i18n="habitByHabit">HABIT BY HABIT</p>
+                <h2 data-i18n="bestPerformers">Your habits</h2>
+              </div>
+            </div>
+            <div id="habitPerformance" class="performance-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="settingsView">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow" data-i18n="makeItYours">MAKE IT YOURS</p>
+            <h1 data-i18n="settings">Settings</h1>
+            <p class="muted" data-i18n="settingsSubtitle">Personalize your HabitFlow experience.</p>
+          </div>
+        </div>
+        <div class="settings-stack">
+          <section class="panel setting-card">
+            <div>
+              <h2 data-i18n="appearance">Appearance</h2>
+              <p class="muted" data-i18n="appearanceDesc">Choose the look that feels right.</p>
+            </div>
+            <div class="setting-control"><button class="choice-button" data-theme="dark">☾ <span
+                  data-i18n="dark">Dark</span></button><button class="choice-button" data-theme="light">☼ <span
+                  data-i18n="light">Light</span></button></div>
+          </section>
+          <section class="panel setting-card">
+            <div>
+              <h2 data-i18n="language">Language</h2>
+              <p class="muted" data-i18n="languageDesc">Choose your preferred language.</p>
+            </div>
+            <div class="setting-control"><button class="choice-button" data-lang="en">English</button><button
+                class="choice-button" data-lang="ar">العربية</button></div>
+          </section>
+          <section class="panel setting-card danger-zone">
+            <div>
+              <h2 data-i18n="dataManagement">Data management</h2>
+              <p class="muted" data-i18n="dataDesc">Export a backup or reset your local data.</p>
+            </div>
+            <div class="setting-control"><button class="secondary-button" id="exportData"
+                data-i18n="exportBackup">Export backup</button><button class="danger-button" id="resetData"
+                data-i18n="resetData">Reset all data</button></div>
+          </section>
+          <p class="storage-note" data-i18n="localStorageNote">Your habits are saved on this device using your browser's
+            local storage.</p>
+        </div>
+      </section>
+      <footer class="footer"><span>peacecode © <span id="year"></span></span><span data-i18n="footerLine">Build better
+          habits. One day at a time.</span></footer>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="habitModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow" data-i18n="makeItCount">MAKE IT COUNT</p>
+          <h2 id="modalTitle" data-i18n="newHabit">Create a habit</h2>
+        </div><button class="icon-button" id="closeModal" aria-label="Close">×</button>
+      </div>
+      <form id="habitForm">
+        <label for="habitName" data-i18n="habitName">Habit name</label><input id="habitName" name="name" maxlength="45"
+          required placeholder="e.g. Read 10 pages">
+        <div class="form-row">
+          <div><label for="habitCategory" data-i18n="category">Category</label><select id="habitCategory"
+              name="category">
+              <option value="Health">Health</option>
+              <option value="Learning">Learning</option>
+              <option value="Mindfulness">Mindfulness</option>
+              <option value="Productivity">Productivity</option>
+              <option value="Personal">Personal</option>
+            </select></div>
+          <div><label for="habitIcon" data-i18n="icon">Icon</label><select id="habitIcon" name="icon">
+              <option>✦</option>
+              <option>📚</option>
+              <option>💧</option>
+              <option>🏃</option>
+              <option>🧘</option>
+              <option>💻</option>
+              <option>🎯</option>
+              <option>🎨</option>
+              <option>🌱</option>
+              <option>✍️</option>
+            </select></div>
+        </div>
+        <label data-i18n="color">Color</label>
+        <div class="color-options"><label><input type="radio" name="color" value="#42D9F5" checked><i
+              style="--swatch:#42D9F5"></i></label><label><input type="radio" name="color" value="#A78BFA"><i
+              style="--swatch:#A78BFA"></i></label><label><input type="radio" name="color" value="#F6A86B"><i
+              style="--swatch:#F6A86B"></i></label><label><input type="radio" name="color" value="#75D6A3"><i
+              style="--swatch:#75D6A3"></i></label><label><input type="radio" name="color" value="#F28BA8"><i
+              style="--swatch:#F28BA8"></i></label></div>
+        <label data-i18n="frequency">Repeat</label>
+        <div class="days-picker" id="daysPicker"></div>
+        <div class="modal-actions"><button type="button" class="secondary-button" id="cancelModal"
+            data-i18n="cancel">Cancel</button><button type="submit" class="primary-button" id="saveHabitBtn"
+            data-i18n="saveHabit">Save habit</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+</body>
+
+</html>
