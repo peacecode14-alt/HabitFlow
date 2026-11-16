@@ -2,16 +2,12 @@
 <html lang="en" dir="ltr">
 
 <head>
-  <link rel="manifest" href="./manifest.json">
-
-  <meta name="theme-color" content="#17243d">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="HabitFlow">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#101820">
+  <meta name="theme-color" content="#17243d">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <meta name="description" content="HabitFlow helps you build better habits, one day at a time.">
   <title>HabitFlow — Build Better Habits</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,6 +22,7 @@
 </head>
 
 <body>
+  <a class="skip-link" href="#mainContent" data-i18n="skipToContent">Skip to content</a>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <a class="brand" href="#" aria-label="HabitFlow home">
@@ -59,15 +56,16 @@
       </div>
     </aside>
 
-    <main class="main-content">
+    <main class="main-content" id="mainContent" tabindex="-1">
       <header class="topbar">
-        <button class="mobile-menu icon-button" id="mobileMenu" aria-label="Open menu">☰</button>
+        <button class="mobile-menu icon-button" id="mobileMenu" aria-label="Open menu"
+          aria-controls="sidebar">☰</button>
         <div class="breadcrumb"><span data-i18n="workspace">WORKSPACE</span><b>/</b><strong
             id="pageTitle">Dashboard</strong></div>
         <div class="topbar-actions">
           <span class="today-label" id="topDate"></span>
           <button class="icon-button" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">☼</button>
-          <button class="language-button" id="languageToggle">العربية</button>
+          <button class="language-button" id="languageToggle" aria-label="Change language">العربية</button>
         </div>
       </header>
 
@@ -121,10 +119,25 @@
           </div><button class="primary-button" id="addHabitBtn2">＋ <span data-i18n="addHabit">Add habit</span></button>
         </div>
         <div class="filter-row">
-          <div class="filter-tabs" id="habitFilters"><button class="filter-tab active" data-filter="all"
-              data-i18n="all">All</button><button class="filter-tab" data-filter="active"
-              data-i18n="active">Active</button><button class="filter-tab" data-filter="completed"
-              data-i18n="completedToday">Completed today</button></div><span class="muted small" id="habitCount"></span>
+          <div class="filter-controls">
+            <div class="filter-tabs" id="habitFilters" role="group" aria-label="Filter by status"><button
+                class="filter-tab active" data-filter="all" data-i18n="all" aria-pressed="true">All</button><button
+                class="filter-tab" data-filter="active" data-i18n="active" aria-pressed="false">Active</button><button
+                class="filter-tab" data-filter="completed" data-i18n="completedToday" aria-pressed="false">Completed
+                today</button><button class="filter-tab" data-filter="archived" data-i18n="archived"
+                aria-pressed="false">Archived</button></div>
+            <div class="category-filter"><select id="categoryFilter" aria-label="Filter by category"></select></div>
+          </div><span class="muted small" id="habitCount"></span>
+        </div>
+        <div class="filter-row tools-row"><input type="search" id="habitSearch" class="search-input" maxlength="60"
+            autocomplete="off" data-i18n-placeholder="searchHabits" placeholder="Search habits"
+            aria-label="Search habits">
+          <div class="category-filter"><select id="habitSort" aria-label="Sort habits">
+              <option value="newest" data-i18n="sortNewest">Newest first</option>
+              <option value="name" data-i18n="sortName">Name (A–Z)</option>
+              <option value="category" data-i18n="sortCategory">Category</option>
+              <option value="streak" data-i18n="sortStreak">Longest streak</option>
+            </select></div>
         </div>
         <div class="panel">
           <div id="allHabits" class="habit-list full-list"></div>
@@ -207,20 +220,55 @@
             <div class="setting-control"><button class="choice-button" data-lang="en">English</button><button
                 class="choice-button" data-lang="ar">العربية</button></div>
           </section>
+          <section class="panel setting-card" id="reminderCard">
+            <div>
+              <h2 data-i18n="reminders">Reminders</h2>
+              <p class="muted" data-i18n="remindersDesc">Get a notification at the time you set for each habit.</p>
+              <p class="sync-status" id="reminderStatus" role="status"></p>
+            </div>
+            <div class="setting-control"><button class="secondary-button" id="enableNotifications"
+                data-i18n="enableNotifications">Enable notifications</button></div>
+          </section>
+          <section class="panel setting-card sync-card" id="syncCard">
+            <div>
+              <h2 data-i18n="cloudSync">Cloud sync</h2>
+              <p class="muted" data-i18n="cloudSyncDesc">Keep your habits in sync across devices using your own sync
+                server.</p>
+              <p class="sync-status" id="syncStatus" role="status" aria-live="polite"></p>
+            </div>
+            <div class="sync-form">
+              <input id="syncUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" dir="ltr"
+                data-i18n-placeholder="syncUrlPlaceholder" placeholder="https://your-server.example.com/sync"
+                aria-label="Sync server URL">
+              <input id="syncToken" type="password" autocomplete="off" dir="ltr"
+                data-i18n-placeholder="syncTokenPlaceholder" placeholder="Access token" aria-label="Access token">
+              <input id="syncPassphrase" type="password" autocomplete="off" dir="ltr"
+                data-i18n-placeholder="syncPassphrasePlaceholder" placeholder="Encryption passphrase (optional)"
+                aria-label="Encryption passphrase">
+              <p class="muted" data-i18n="syncPassphraseNote">With a passphrase your habits are encrypted on this device
+                before upload. If you forget it, the cloud copy cannot be recovered.</p>
+              <div class="setting-control"><button class="primary-button" id="syncSave" data-i18n="syncSave">Save &amp;
+                  connect</button><button class="secondary-button" id="syncNow" data-i18n="syncNow">Sync
+                  now</button><button class="danger-button" id="syncDisconnect"
+                  data-i18n="syncDisconnect">Disconnect</button></div>
+            </div>
+          </section>
           <section class="panel setting-card danger-zone">
             <div>
               <h2 data-i18n="dataManagement">Data management</h2>
               <p class="muted" data-i18n="dataDesc">Export a backup or reset your local data.</p>
             </div>
             <div class="setting-control"><button class="secondary-button" id="exportData"
-                data-i18n="exportBackup">Export backup</button><button class="danger-button" id="resetData"
+                data-i18n="exportBackup">Export backup</button><button class="secondary-button" id="importData"
+                data-i18n="importBackup">Import backup</button><input type="file" id="importFile"
+                accept="application/json,.json" hidden><button class="danger-button" id="resetData"
                 data-i18n="resetData">Reset all data</button></div>
           </section>
           <p class="storage-note" data-i18n="localStorageNote">Your habits are saved on this device using your browser's
             local storage.</p>
         </div>
       </section>
-      <footer class="footer"><span>peacecode © <span id="year"></span></span><span data-i18n="footerLine">Build better
+      <footer class="footer"><span>HabitFlow © <span id="year"></span></span><span data-i18n="footerLine">Build better
           habits. One day at a time.</span></footer>
     </main>
   </div>
@@ -231,20 +279,14 @@
         <div>
           <p class="eyebrow" data-i18n="makeItCount">MAKE IT COUNT</p>
           <h2 id="modalTitle" data-i18n="newHabit">Create a habit</h2>
-        </div><button class="icon-button" id="closeModal" aria-label="Close">×</button>
+        </div><button class="icon-button" id="closeModal" aria-label="Close" type="button">×</button>
       </div>
       <form id="habitForm">
         <label for="habitName" data-i18n="habitName">Habit name</label><input id="habitName" name="name" maxlength="45"
           required placeholder="e.g. Read 10 pages">
         <div class="form-row">
           <div><label for="habitCategory" data-i18n="category">Category</label><select id="habitCategory"
-              name="category">
-              <option value="Health">Health</option>
-              <option value="Learning">Learning</option>
-              <option value="Mindfulness">Mindfulness</option>
-              <option value="Productivity">Productivity</option>
-              <option value="Personal">Personal</option>
-            </select></div>
+              name="category"></select></div>
           <div><label for="habitIcon" data-i18n="icon">Icon</label><select id="habitIcon" name="icon">
               <option>✦</option>
               <option>📚</option>
@@ -258,6 +300,18 @@
               <option>✍️</option>
             </select></div>
         </div>
+        <input id="newCategory" maxlength="30" hidden data-i18n-placeholder="newCategoryPlaceholder"
+          placeholder="Category name" aria-label="New category name">
+        <div class="form-row">
+          <div><label for="habitType" data-i18n="habitType">Habit type</label><select id="habitType" name="type">
+              <option value="check" data-i18n="typeCheck">Done / not done</option>
+              <option value="count" data-i18n="typeCount">Counter</option>
+            </select></div>
+          <div id="targetWrap" hidden><label for="habitTarget" data-i18n="dailyTarget">Daily target</label><input
+              id="habitTarget" name="target" type="number" min="1" max="999" value="1" inputmode="numeric"></div>
+        </div>
+        <label for="habitReminder" data-i18n="reminderTime">Reminder (optional)</label><input id="habitReminder"
+          name="reminderTime" type="time">
         <label data-i18n="color">Color</label>
         <div class="color-options"><label><input type="radio" name="color" value="#42D9F5" checked><i
               style="--swatch:#42D9F5"></i></label><label><input type="radio" name="color" value="#A78BFA"><i
@@ -271,6 +325,18 @@
             data-i18n="cancel">Cancel</button><button type="submit" class="primary-button" id="saveHabitBtn"
             data-i18n="saveHabit">Save habit</button></div>
       </form>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="dayModal" aria-hidden="true">
+    <div class="modal day-modal" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow" data-i18n="dayDetails">DAY DETAILS</p>
+          <h2 id="dayModalTitle"></h2>
+        </div><button class="icon-button" id="closeDayModal" aria-label="Close" type="button">×</button>
+      </div>
+      <p class="muted day-hint" data-i18n="editDayHint">Update what you did on this day.</p>
+      <div id="dayHabits" class="habit-list"></div>
     </div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
