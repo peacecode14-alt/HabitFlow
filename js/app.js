@@ -836,7 +836,11 @@ function bindEvents() {
   $("#syncNow").addEventListener("click", () => runSync(true));
   $("#syncDisconnect").addEventListener("click", disconnectSync);
   $("#enableNotifications").addEventListener("click", enableNotifications);
-  window.addEventListener("online", () => { if (syncState === "offline") syncState = "idle"; runSync(); });
+  window.addEventListener("online", () => {
+  if (syncState === "offline") syncState = "idle";
+  runSync();
+  scheduleReminderSync();
+});
   window.addEventListener("offline", () => { if (loadSyncConfig().enabled) { syncState = "offline"; renderSyncStatus(); } });
 
   $("#exportData").addEventListener("click", exportBackup);
