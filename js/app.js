@@ -26,6 +26,7 @@ let lastFocus = null;
 let syncState = "idle";         // idle | syncing | offline | error
 let syncError = null;
 let syncTimer = null;
+let reminderSyncTimer = null;
 let stopRealtimeListener = null;
 let realtimeListenerUid = null;
 let realtimeSyncPending = false;
