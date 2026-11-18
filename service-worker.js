@@ -12,33 +12,43 @@ self.addEventListener("notificationclick", event => {
 });
 
 // Firebase Cloud Messaging background support
-importScripts(
-  "https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js",
-  "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging-compat.js"
-);
+// Keep the Service Worker functional if Firebase CDN is unavailable.
+try {
+  importScripts(
+    "https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js",
+    "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging-compat.js"
+  );
 
-firebase.initializeApp({
-  apiKey: "AIzaSyAs6iYOHedal4YRBypuosZPWjLCzkScz1w",
-  authDomain: "habitflow-aed6b.firebaseapp.com",
-  projectId: "habitflow-aed6b",
-  storageBucket: "habitflow-aed6b.firebasestorage.app",
-  messagingSenderId: "884332517564",
-  appId: "1:884332517564:web:5047b72b81748578e058b9"
-});
+  firebase.initializeApp({
+    apiKey: "AIzaSyAs6iYOHedal4YRBypuosZPWjLCzkScz1w",
+    authDomain: "habitflow-aed6b.firebaseapp.com",
+    projectId: "habitflow-aed6b",
+    storageBucket: "habitflow-aed6b.firebasestorage.app",
+    messagingSenderId: "884332517564",
+    appId: "1:884332517564:web:5047b72b81748578e058b9"
+  });
 
-const messaging = firebase.messaging();
+  const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage(payload => {
-  const title = payload.data?.title || "HabitFlow";
-  const options = {
-    body: payload.data?.body || "حان وقت عادتك",
-    icon: "./assets/icons/icon-192.png",
-    tag: payload.data?.tag || "habitflow-reminder",
-    data: { url: "./" }
-  };
+  messaging.onBackgroundMessage(payload => {
+    const title = payload.data?.title || "HabitFlow";
 
-  self.registration.showNotification(title, options);
-});
+    const options = {
+      body: payload.data?.body || "حان وقت عادتك",
+      icon: "./assets/icons/icon-192.png",
+      tag: payload.data?.tag || "habitflow-reminder",
+      data: { url: "./" }
+    };
+
+    self.registration.showNotification(title, options);
+  });
+
+} catch (error) {
+  console.warn(
+    "HabitFlow: Firebase Messaging could not be initialized.",
+    error
+  );
+}
 
 // Keep this list limited to files that are present in the repository.
 const APP_SHELL = [
