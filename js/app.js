@@ -7,7 +7,6 @@ import { isScheduled, currentStreak, bestStreak, completionRate } from "./servic
 import { isDone, valueOn, targetOf, noteOn } from "./services/log.js";
 import { loadSyncConfig, saveSyncConfig, clearSyncConfig, syncNow, hasUnsyncedChanges, SyncError } from "./services/sync.js";
 import { dueReminders, notificationPermission, showSystemNotification } from "./services/reminders.js";
-import { registerPushToken } from "./services/push.js";
 import { parseBackup } from "./services/backup.js";
 import { TEMPLATES } from "./templates.js";
 
@@ -534,6 +533,7 @@ async function enableNotifications() {
       return;
     }
 
+    const { registerPushToken } = await import("./services/push.js");
     const deviceToken = await registerPushToken();
     const idToken = await currentUser.getIdToken();
 
