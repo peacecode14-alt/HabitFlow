@@ -3,7 +3,8 @@ import {
   doc,
   getDoc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 /** Firestore stores one sync document per authenticated Firebase user. */
@@ -29,6 +30,15 @@ export function createFirestoreAdapter(uid) {
         payload,
         updatedAt: serverTimestamp()
       });
+    },
+    listen(onChange, onError) {
+      return onSnapshot(
+        stateRef,
+        () => onChange(),
+        error => {
+          if (onError) onError(error);
+        }
+      );
     }
   };
 }
