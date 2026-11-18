@@ -507,6 +507,57 @@ function renderReminderStatus() {
     permission === "unsupported" || permission === "denied";
 }
 
+async function syncRemindersToServer() {
+  if (
+    !currentUser ||
+    !currentUser.emailVerified ||
+    notificationPermission() !== "granted" ||
+    !navigator.onLine
+  ) return;
+
+  try {
+    const syncingUid = currentUser.uid;
+
+    const { registerPushToken } =
+      await import("./services/push.js");
+
+    const deviceToken = await registerPushToken();
+    const idToken = await currentUser.getIdToken();
+
+    if (!currentUser || currentUser.uid !== syncingUid) return;
+
+    const schedules = getAllHabits()
+      .filter(h => !h.archivedAt && h.reminderTime)
+      .map(h => ({
+        habitKey: h.id,
+        reminderTime: h.reminderTime,
+        repeatDays: h.frequency
+      }));
+
+    const response = await fetch(
+      "https://yylgyambooemhfpbcnpi.supabase.co/functions/v1/register-reminders",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          deviceToken,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          schedules
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Reminder sync failed.");
+    }
+  } catch (error) {
+    // Automatic sync is silent; the next attempt can retry.
+  }
+}
+
 async function enableNotifications() {
   const button = $("#enableNotifications");
 
