@@ -1,5 +1,15 @@
 const CACHE_PREFIX = "habitflow-";
-const CACHE_NAME = `${CACHE_PREFIX}v13`;
+const CACHE_NAME = `${CACHE_PREFIX}v14`;
+
+// Clicking a reminder notification brings the app to the front.
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients =>
+      clients.length ? clients[0].focus() : self.clients.openWindow("./")
+    )
+  );
+});
 
 // Firebase Cloud Messaging background support
 importScripts(
@@ -53,6 +63,7 @@ const APP_SHELL = [
   "./js/services/date.js",
   "./js/services/log.js",
   "./js/services/reminders.js",
+  "./js/services/push.js",
   "./js/services/stats.js",
   "./js/services/sync.js",
   "./js/services/firestore-sync.js",
@@ -128,12 +139,3 @@ self.addEventListener("fetch", event => {
   );
 });
 
-// Clicking a reminder notification brings the app to the front.
-self.addEventListener("notificationclick", event => {
-  event.notification.close();
-  event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients =>
-      clients.length ? clients[0].focus() : self.clients.openWindow("./")
-    )
-  );
-});
