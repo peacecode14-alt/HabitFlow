@@ -515,6 +515,11 @@ async function enableNotifications() {
     return;
   }
 
+  if (!currentUser || !currentUser.emailVerified) {
+    showToast("سجل الدخول بحسابك المؤكد أولًا لتفعيل التذكيرات.");
+    return;
+  }
+
   button.disabled = true;
 
   try {
@@ -529,18 +534,46 @@ async function enableNotifications() {
       return;
     }
 
-    await registerPushToken();
+    const deviceToken = await registerPushToken();
+    const idToken = await currentUser.getIdToken();
+
+    const schedules = getAllHabits()
+      .filter(h => !h.archivedAt && h.reminderTime)
+      .map(h => ({
+        habitKey: h.id,
+        reminderTime: h.reminderTime,
+        repeatDays: h.frequency
+      }));
+
+    const response = await fetch(
+      "https://yylgyambooemhfpbcnpi.supabase.co/functions/v1/register-reminders",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          deviceToken,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          schedules
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Reminder registration failed.");
+    }
 
     showToast(
-      "تم تسجيل الجهاز مع Firebase. باقي إعداد الإرسال من السيرفر."
+      `تم تسجيل الجهاز ومزامنة ${result.schedulesSynced} تذكير.`
     );
 
   } catch (error) {
-    console.error("HabitFlow push registration failed:", error);
-
-    showToast(
-      "تعذر تسجيل الجهاز. راجع الاتصال وإعدادات الإشعارات."
-    );
+    console.error("HabitFlow reminder registration failed:", error);
+    showToast("تعذر تسجيل التذكيرات. راجع الاتصال وحاول مرة أخرى.");
 
   } finally {
     renderReminderStatus();
