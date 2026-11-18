@@ -558,6 +558,14 @@ async function syncRemindersToServer() {
   }
 }
 
+function scheduleReminderSync() {
+  clearTimeout(reminderSyncTimer);
+
+  reminderSyncTimer = setTimeout(() => {
+    syncRemindersToServer();
+  }, 2500);
+}
+
 async function enableNotifications() {
   const button = $("#enableNotifications");
 
