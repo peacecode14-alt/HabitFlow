@@ -1,5 +1,34 @@
 const CACHE_PREFIX = "habitflow-";
-const CACHE_NAME = `${CACHE_PREFIX}v12`;
+const CACHE_NAME = `${CACHE_PREFIX}v13`;
+
+// Firebase Cloud Messaging background support
+importScripts(
+  "https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js",
+  "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging-compat.js"
+);
+
+firebase.initializeApp({
+  apiKey: "AIzaSyAs6iYOHedal4YRBypuosZPWjLCzkScz1w",
+  authDomain: "habitflow-aed6b.firebaseapp.com",
+  projectId: "habitflow-aed6b",
+  storageBucket: "habitflow-aed6b.firebasestorage.app",
+  messagingSenderId: "884332517564",
+  appId: "1:884332517564:web:5047b72b81748578e058b9"
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(payload => {
+  const title = payload.data?.title || "HabitFlow";
+  const options = {
+    body: payload.data?.body || "حان وقت عادتك",
+    icon: "./assets/icons/icon-192.png",
+    tag: payload.data?.tag || "habitflow-reminder",
+    data: { url: "./" }
+  };
+
+  self.registration.showNotification(title, options);
+});
 
 // Keep this list limited to files that are present in the repository.
 const APP_SHELL = [
