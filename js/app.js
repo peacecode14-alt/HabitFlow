@@ -842,6 +842,11 @@ function bindEvents() {
   scheduleReminderSync();
 });
   window.addEventListener("offline", () => { if (loadSyncConfig().enabled) { syncState = "offline"; renderSyncStatus(); } });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      scheduleReminderSync();
+    }
+  });
 
   $("#exportData").addEventListener("click", exportBackup);
   $("#importData").addEventListener("click", () => $("#importFile").click());
