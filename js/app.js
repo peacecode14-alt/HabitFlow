@@ -7,6 +7,7 @@ import { isScheduled, currentStreak, bestStreak, completionRate } from "./servic
 import { isDone, valueOn, targetOf, noteOn } from "./services/log.js";
 import { loadSyncConfig, saveSyncConfig, clearSyncConfig, syncNow, hasUnsyncedChanges, SyncError } from "./services/sync.js";
 import { dueReminders, notificationPermission, showSystemNotification } from "./services/reminders.js";
+import { registerPushToken } from "./services/push.js";
 import { parseBackup } from "./services/backup.js";
 import { TEMPLATES } from "./templates.js";
 
@@ -483,15 +484,67 @@ function checkReminders() {
   if (due.length) writeFired();
 }
 function renderReminderStatus() {
-  const el = $("#reminderStatus"), permission = notificationPermission();
-  const text = { unsupported: t().notifUnsupported, default: t().notifDefault, granted: t().notifGranted, denied: t().notifDenied }[permission];
-  el.textContent = text; el.className = `sync-status ${permission === "granted" ? "ok" : permission === "denied" ? "warn" : ""}`.trim();
-  $("#enableNotifications").disabled = permission !== "default";
+  const el = $("#reminderStatus");
+  const permission = notificationPermission();
+
+  const text = {
+    unsupported: t().notifUnsupported,
+    default: t().notifDefault,
+    granted: t().notifGranted,
+    denied: t().notifDenied
+  }[permission];
+
+  el.textContent = text;
+  el.className = `sync-status ${
+    permission === "granted"
+      ? "ok"
+      : permission === "denied"
+        ? "warn"
+        : ""
+  }`.trim();
+
+  $("#enableNotifications").disabled =
+    permission === "unsupported" || permission === "denied";
 }
+
 async function enableNotifications() {
-  if (notificationPermission() !== "default") return;
-  try { await Notification.requestPermission(); } catch (error) { console.error(error); }
-  renderReminderStatus();
+  const button = $("#enableNotifications");
+
+  if (notificationPermission() === "unsupported") {
+    renderReminderStatus();
+    return;
+  }
+
+  button.disabled = true;
+
+  try {
+    let permission = notificationPermission();
+
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== "granted") {
+      renderReminderStatus();
+      return;
+    }
+
+    await registerPushToken();
+
+    showToast(
+      "تم تسجيل الجهاز مع Firebase. باقي إعداد الإرسال من السيرفر."
+    );
+
+  } catch (error) {
+    console.error("HabitFlow push registration failed:", error);
+
+    showToast(
+      "تعذر تسجيل الجهاز. راجع الاتصال وإعدادات الإشعارات."
+    );
+
+  } finally {
+    renderReminderStatus();
+  }
 }
 
 /* ---------- cloud sync ---------- */
