@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "habitflow-";
-const CACHE_NAME = `${CACHE_PREFIX}v11`;
+const CACHE_NAME = `${CACHE_PREFIX}v12`;
 
 // Keep this list limited to files that are present in the repository.
 const APP_SHELL = [
