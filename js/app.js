@@ -26,6 +26,9 @@ let lastFocus = null;
 let syncState = "idle";         // idle | syncing | offline | error
 let syncError = null;
 let syncTimer = null;
+let stopRealtimeListener = null;
+let realtimeListenerUid = null;
+let realtimeSyncPending = false;
 const firedReminders = new Set(readFired());
 
 /* ---------- helpers ---------- */
@@ -49,9 +52,23 @@ function renderProfile(name = "", email = "") {
 }
 
 let currentUser = null;
+function stopRealtimeSync() {
+  if (stopRealtimeListener) {
+    stopRealtimeListener();
+  }
+
+  stopRealtimeListener = null;
+  realtimeListenerUid = null;
+}
+
 function loadSignedInProfile(user) {
-  // Only verified accounts count as signed in; Firebase Authentication displayName is the name source.
-  currentUser = user && user.emailVerified ? user : null;
+  const nextUser = user && user.emailVerified ? user : null;
+
+  if (!nextUser || currentUser?.uid !== nextUser.uid) {
+    stopRealtimeSync();
+  }
+
+  currentUser = nextUser;
   if (!currentUser) renderProfile();
   else renderProfile(currentUser.displayName || "", currentUser.email || "");
   renderSyncStatus();
@@ -448,6 +465,7 @@ async function importBackup(file) {
 }
 function resetAppData() {
   if (!confirm(t().confirmReset)) return;
+  stopRealtimeSync();
   clearTimeout(syncTimer); clearData(); clearSyncConfig(); localStorage.removeItem("habitflow_cloud_owner"); loadSyncInputs();
   syncState = "idle"; syncError = null; replaceHabits([]);
   language = APP_CONFIG.defaultLanguage; theme = APP_CONFIG.defaultTheme;
@@ -511,9 +529,56 @@ function renderSyncStatus() {
   $("#syncNow").disabled = !currentUser || !enabled || syncState === "syncing";
   $("#syncDisconnect").disabled = !enabled;
 }
+async function startRealtimeSync(uid) {
+  if (realtimeListenerUid === uid && stopRealtimeListener) return;
+
+  stopRealtimeSync();
+
+  try {
+    const { createFirestoreAdapter } =
+      await import("./services/firestore-sync.js");
+
+    if (
+      !currentUser ||
+      currentUser.uid !== uid ||
+      !loadSyncConfig().enabled
+    ) return;
+
+    const adapter = createFirestoreAdapter(uid);
+
+    stopRealtimeListener = adapter.listen(
+      () => {
+        if (!currentUser || currentUser.uid !== uid) return;
+
+        if (syncState === "syncing") {
+          realtimeSyncPending = true;
+          return;
+        }
+
+        runSync();
+      },
+      error => {
+        console.warn("HabitFlow realtime listener error:", error);
+      }
+    );
+
+    realtimeListenerUid = uid;
+  } catch (error) {
+    console.error("Could not start realtime sync:", error);
+  }
+}
+
 async function runSync(manual = false) {
   const cfg = loadSyncConfig();
-  if (!cfg.enabled || !currentUser || syncState === "syncing") { renderSyncStatus(); return; }
+  if (!cfg.enabled || !currentUser) {
+    renderSyncStatus();
+    return;
+  }
+
+  if (syncState === "syncing") {
+    realtimeSyncPending = true;
+    return;
+  }
   if (!navigator.onLine) { syncState = "offline"; renderSyncStatus(); return; }
 
   const ownerKey = "habitflow_cloud_owner";
@@ -539,6 +604,7 @@ async function runSync(manual = false) {
     await syncNow(createFirestoreAdapter(syncingUid), { passphrase: cfg.passphrase });
     localStorage.setItem(ownerKey, syncingUid);
     syncState = "idle"; syncError = null;
+    await startRealtimeSync(syncingUid);
     renderAll();
     if (manual) showToast(t().syncDone);
     if (currentUser && currentUser.uid !== syncingUid) runSync();
@@ -548,6 +614,10 @@ async function runSync(manual = false) {
     if (manual) showToast(t().syncFailed);
   }
   renderSyncStatus();
+  if (realtimeSyncPending && currentUser && loadSyncConfig().enabled) {
+    realtimeSyncPending = false;
+    Promise.resolve().then(() => runSync());
+  }
 }
 function scheduleSync() {
   const cfg = loadSyncConfig();
@@ -565,6 +635,7 @@ function connectSync() {
   syncState = "idle"; syncError = null; showToast(t().syncSaved); runSync(true);
 }
 function disconnectSync() {
+  stopRealtimeSync();
   clearTimeout(syncTimer);
   clearSyncConfig();
   loadSyncInputs();
