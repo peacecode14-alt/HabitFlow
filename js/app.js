@@ -333,7 +333,11 @@ function renderAll() {
   renderStats(habits); renderTodayHabits(habits); renderAllHabits(habits); renderCharts(habits); renderCalendar(habits);
   renderSyncStatus(); renderReminderStatus(); refreshDayModal();
 }
-function afterChange() { renderAll(); scheduleSync(); }
+function afterChange() {
+  renderAll();
+  scheduleSync();
+  scheduleReminderSync();
+}
 
 /* ---------- modals ---------- */
 function openModalEl(el, focusSelector) {
