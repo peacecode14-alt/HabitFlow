@@ -97,10 +97,14 @@ async function sendPendingUnregister(user, pending) {
 
   const request = (async () => {
     try {
-      await postToReminders(user, {
+      const result = await postToReminders(user, {
         action: "unregister",
         deviceToken: pending.deviceToken,
       });
+
+      if (result.ok !== true) {
+        throw new Error("Reminder unregister was not confirmed.");
+      }
 
       const currentPending = readPendingUnregister();
 
