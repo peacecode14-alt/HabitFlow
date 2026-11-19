@@ -81,6 +81,8 @@ $function$;
 
 -- Only the service role (Edge Functions) may call it.
 revoke execute on function public.claim_reminder_delivery(uuid, date) from public, anon, authenticated;
+grant execute on function public.claim_reminder_delivery(uuid, date)
+to service_role;
 
 -- The cron job is created once per project because it embeds the project URL and the CRON_SECRET:
 --
