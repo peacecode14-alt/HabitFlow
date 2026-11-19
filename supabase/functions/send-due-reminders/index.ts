@@ -138,6 +138,8 @@ async function sendToDevice(token: string, accessToken: string, body: string) {
   return { ok: false, invalidToken: unregistered };
 }
 
+const PAGE_SIZE = 500;
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return response({ error: "Method not allowed." }, 405);
 
@@ -160,114 +162,171 @@ Deno.serve(async (req: Request) => {
       throw new Error("Firebase service account configuration is invalid.");
     }
 
-    const { data: schedules, error: schedulesError } = await admin
-      .from("reminder_schedules")
-      .select("id,firebase_uid,reminder_time,timezone,repeat_days,notification_body,updated_at")
-      .eq("enabled", true)
-      .order("id")
-      .limit(500);
-
-    if (schedulesError) throw schedulesError;
-
     let due = 0;
     let sent = 0;
     let failed = 0;
     let skipped = 0;
     let accessToken: string | null = null;
 
-    for (const schedule of schedules ?? []) {
-      let clock;
-      try {
-        clock = localClock(schedule.timezone);
-      } catch {
-        skipped++;
-        continue;
+    let lastId: string | null = null;
+
+    while (true) {
+      let query = admin
+        .from("reminder_schedules")
+        .select("id,firebase_uid,reminder_time,timezone,repeat_days,notification_body,updated_at")
+        .eq("enabled", true)
+        .order("id", { ascending: true })
+        .limit(PAGE_SIZE);
+
+      if (lastId !== null) {
+        query = query.gt("id", lastId);
       }
 
-      const minutesLate = toMinutes(clock.time) - toMinutes(String(schedule.reminder_time).slice(0, 5));
-      if (
-        minutesLate < 0 ||
-        minutesLate >= DUE_WINDOW_MINUTES ||
-        !Array.isArray(schedule.repeat_days) ||
-        !schedule.repeat_days.includes(clock.day)
-      ) {
-        continue;
-      }
+      const { data: schedules, error: schedulesError } = await query;
 
-      // A reminder created or edited after its time today waits for tomorrow instead of firing late.
-      if (minutesLate > 0 && new Date(schedule.updated_at).getTime() > Date.now() - minutesLate * 60_000) {
-        skipped++;
-        continue;
-      }
+      if (schedulesError) throw schedulesError;
 
-      due++;
+      if (!schedules?.length) break;
 
-      const { data: claimed, error: claimError } = await admin.rpc(
-        "claim_reminder_delivery",
-        { p_schedule_id: schedule.id, p_local_date: clock.date }
-      );
-      if (claimError) throw claimError;
-      if (claimed !== true) {
-        skipped++;
-        continue;
-      }
+      for (const schedule of schedules) {
+        let clock;
 
-      const { data: devices, error: devicesError } = await admin
-        .from("reminder_devices")
-        .select("id,fcm_token")
-        .eq("firebase_uid", schedule.firebase_uid);
-
-      if (devicesError) {
-        await admin.from("reminder_deliveries")
-          .update({ status: "failed", last_error: "Device lookup failed." })
-          .eq("schedule_id", schedule.id)
-          .eq("local_date", clock.date);
-        failed++;
-        continue;
-      }
-
-      if (!devices?.length) {
-        await admin.from("reminder_deliveries")
-          .update({ status: "failed", last_error: "No registered devices." })
-          .eq("schedule_id", schedule.id)
-          .eq("local_date", clock.date);
-        failed++;
-        continue;
-      }
-
-      if (!accessToken) accessToken = await getGoogleAccessToken(serviceAccount);
-
-      const body = typeof schedule.notification_body === "string" && schedule.notification_body.trim()
-        ? schedule.notification_body
-        : "Time for your habit";
-
-      let anySent = false;
-      for (const device of devices) {
         try {
-          const result = await sendToDevice(device.fcm_token, accessToken, body);
-          if (result.ok) {
-            anySent = true;
-          } else if (result.invalidToken) {
-            await admin.from("reminder_devices").delete().eq("id", device.id);
-          }
+          clock = localClock(schedule.timezone);
         } catch {
-          // Keep this generic; delivery details are recorded without exposing tokens.
+          skipped++;
+          continue;
+        }
+
+        const minutesLate =
+          toMinutes(clock.time) -
+          toMinutes(String(schedule.reminder_time).slice(0, 5));
+
+        if (
+          minutesLate < 0 ||
+          minutesLate >= DUE_WINDOW_MINUTES ||
+          !Array.isArray(schedule.repeat_days) ||
+          !schedule.repeat_days.includes(clock.day)
+        ) {
+          continue;
+        }
+
+        if (
+          minutesLate > 0 &&
+          new Date(schedule.updated_at).getTime() >
+            Date.now() - minutesLate * 60_000
+        ) {
+          skipped++;
+          continue;
+        }
+
+        due++;
+
+        const { data: claimed, error: claimError } = await admin.rpc(
+          "claim_reminder_delivery",
+          {
+            p_schedule_id: schedule.id,
+            p_local_date: clock.date
+          }
+        );
+
+        if (claimError) throw claimError;
+
+        if (claimed !== true) {
+          skipped++;
+          continue;
+        }
+
+        const { data: devices, error: devicesError } = await admin
+          .from("reminder_devices")
+          .select("id,fcm_token")
+          .eq("firebase_uid", schedule.firebase_uid);
+
+        if (devicesError) {
+          await admin.from("reminder_deliveries")
+            .update({
+              status: "failed",
+              last_error: "Device lookup failed."
+            })
+            .eq("schedule_id", schedule.id)
+            .eq("local_date", clock.date);
+
+          failed++;
+          continue;
+        }
+
+        if (!devices?.length) {
+          await admin.from("reminder_deliveries")
+            .update({
+              status: "failed",
+              last_error: "No registered devices."
+            })
+            .eq("schedule_id", schedule.id)
+            .eq("local_date", clock.date);
+
+          failed++;
+          continue;
+        }
+
+        if (!accessToken) {
+          accessToken = await getGoogleAccessToken(serviceAccount);
+        }
+
+        const body =
+          typeof schedule.notification_body === "string" &&
+          schedule.notification_body.trim()
+            ? schedule.notification_body
+            : "Time for your habit";
+
+        let anySent = false;
+
+        for (const device of devices) {
+          try {
+            const result = await sendToDevice(
+              device.fcm_token,
+              accessToken,
+              body
+            );
+
+            if (result.ok) {
+              anySent = true;
+            } else if (result.invalidToken) {
+              await admin.from("reminder_devices")
+                .delete()
+                .eq("id", device.id);
+            }
+          } catch {
+            // Keep this generic; delivery details are recorded without exposing tokens.
+          }
+        }
+
+        if (anySent) {
+          await admin.from("reminder_deliveries")
+            .update({
+              status: "sent",
+              sent_at: new Date().toISOString(),
+              last_error: null
+            })
+            .eq("schedule_id", schedule.id)
+            .eq("local_date", clock.date);
+
+          sent++;
+        } else {
+          await admin.from("reminder_deliveries")
+            .update({
+              status: "failed",
+              last_error: "FCM delivery failed."
+            })
+            .eq("schedule_id", schedule.id)
+            .eq("local_date", clock.date);
+
+          failed++;
         }
       }
 
-      if (anySent) {
-        await admin.from("reminder_deliveries")
-          .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
-          .eq("schedule_id", schedule.id)
-          .eq("local_date", clock.date);
-        sent++;
-      } else {
-        await admin.from("reminder_deliveries")
-          .update({ status: "failed", last_error: "FCM delivery failed." })
-          .eq("schedule_id", schedule.id)
-          .eq("local_date", clock.date);
-        failed++;
-      }
+      lastId = schedules[schedules.length - 1].id;
+
+      if (schedules.length < PAGE_SIZE) break;
     }
 
     return response({ ok: true, due, sent, failed, skipped });
