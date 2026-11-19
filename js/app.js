@@ -1324,6 +1324,11 @@ function bindEvents() {
   $("#enableNotifications").addEventListener("click", enableNotifications);
   window.addEventListener("online", () => {
     if (syncState === "offline") syncState = "idle";
+
+    if (currentUser) {
+      retryPendingUnregister(currentUser);
+    }
+
     runSync();
     scheduleReminderSync();
   });
