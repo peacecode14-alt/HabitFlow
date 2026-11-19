@@ -35,7 +35,9 @@ const copy = {
     invalidEmail: "Please enter a valid email address.", tooMany: "Too many attempts. Wait a moment and try again.",
     network: "Can't reach the network. Check your connection and try again.", expiredCode: "This link has expired or was already used. Request a new one.",
     disabled: "This account has been disabled.", verified: "Your email is verified. You can sign in now.",
-    notVerified: "Your email isn't verified yet. We sent you a new verification link; check your inbox."
+    resendVerification: "Resend verification email",
+    resendSent: "A new verification email has been sent. Check your inbox.",
+    notVerified: "Your email isn't verified yet. Use the button below to request a new verification link."
   },
   ar: {
     eyebrow: "عاداتك، حسابك", signinTitle: "أهلًا بعودتك", signupTitle: "أنشئ حسابك",
@@ -53,7 +55,9 @@ const copy = {
     invalidEmail: "صيغة البريد الإلكتروني غير صحيحة.", tooMany: "محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.",
     network: "تعذّر الاتصال بالإنترنت. تحقق من الشبكة وحاول مرة أخرى.", expiredCode: "هذا الرابط منتهي أو استُخدم من قبل. اطلب رابطًا جديدًا.",
     disabled: "تم إيقاف هذا الحساب.", verified: "تم تأكيد بريدك الإلكتروني. يمكنك تسجيل الدخول الآن.",
-    notVerified: "بريدك غير مؤكَّد بعد. أرسلنا لك رابط تأكيد جديدًا، راجع بريدك."
+    resendVerification: "إعادة إرسال رسالة التأكيد",
+    resendSent: "تم إرسال رسالة تأكيد جديدة. راجع بريدك الإلكتروني.",
+    notVerified: "بريدك الإلكتروني غير مؤكّد بعد. استخدم الزر بالأسفل لطلب رسالة تأكيد جديدة."
   }
 };
 const t = () => copy[language];
@@ -85,6 +89,7 @@ function setMode(mode) {
   $("confirmField").hidden = !signup;
   $("password").autocomplete = signup ? "new-password" : "current-password";
   $("authLinks").style.display = signup ? "none" : "flex";
+  $("resendVerificationButton").hidden = true;
   setMessage();
 }
 function renderLanguage() {
@@ -96,6 +101,7 @@ function renderLanguage() {
   $("passwordLabel").textContent = t().password;
   $("confirmLabel").textContent = t().confirm;
   $("forgotButton").textContent = t().forgot;
+  $("resendVerificationButton").textContent = t().resendVerification;
   $("backLink").textContent = t().back;
   $("continueButton").textContent = t().continue;
   $("signOutButton").textContent = t().signout;
@@ -111,6 +117,7 @@ function setBusy(busy) {
   state.busy = busy;
   $("submitButton").disabled = busy;
   $("savePasswordButton").disabled = busy;
+  $("resendVerificationButton").disabled = busy;
   $("submitButton").textContent = busy ? t().busy : (state.mode === "signup" ? t().signup : t().signin);
   $("savePasswordButton").textContent = busy ? t().busy : t().savePassword;
 }
@@ -156,9 +163,8 @@ $("authForm").addEventListener("submit", async event => {
       const credential = await signInWithEmailAndPassword(auth, email, password);
       await reload(credential.user);
       if (!credential.user.emailVerified) {
-        // Resend the link so a lost email never locks the person out; ignore rate-limit errors.
-        try { await sendEmailVerification(credential.user, { url: continueUrl() }); } catch { /* best effort */ }
         await signOut(auth);
+        $("resendVerificationButton").hidden = false;
         throw new Error(t().notVerified);
       }
       showSignedIn(credential.user);
@@ -170,6 +176,57 @@ $("authForm").addEventListener("submit", async event => {
     if (auth.currentUser && !auth.currentUser.emailVerified) await signOut(auth).catch(() => {});
     setMessage(friendlyError(error), "error");
   } finally { setBusy(false); }
+});
+$("resendVerificationButton").addEventListener("click", async () => {
+  if (state.busy) return;
+
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  if (!email || !password) {
+    return setMessage(t().required, "error");
+  }
+
+  setBusy(true);
+
+  try {
+    // Authenticate again to obtain a valid Firebase User object.
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    await reload(credential.user);
+
+    // The user may have verified the email in another tab.
+    if (credential.user.emailVerified) {
+      $("resendVerificationButton").hidden = true;
+      await signOut(auth);
+      setMessage(t().verified, "success");
+      return;
+    }
+
+    await sendEmailVerification(credential.user, {
+      url: continueUrl()
+    });
+
+    await signOut(auth);
+
+    setMessage(t().resendSent, "success");
+
+  } catch (error) {
+    console.error("HabitFlow verification resend error:", error);
+
+    if (auth.currentUser && !auth.currentUser.emailVerified) {
+      await signOut(auth).catch(() => {});
+    }
+
+    setMessage(friendlyError(error), "error");
+
+  } finally {
+    setBusy(false);
+  }
 });
 $("recoveryForm").addEventListener("submit", async event => {
   event.preventDefault();
