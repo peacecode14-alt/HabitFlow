@@ -6,6 +6,8 @@ export const REMINDERS_URL =
   "https://yylgyambooemhfpbcnpi.supabase.co/functions/v1/register-reminders";
 export const PUSH_TOKEN_KEY = "habitflow_push_token";
 export const REMINDER_SIGNATURE_KEY = "habitflow_reminder_signature";
+export const PENDING_UNREGISTER_KEY =
+  "habitflow_pending_unregister";
 
 /** Habits that should produce a push reminder. */
 export function reminderSchedules(habits) {
@@ -60,23 +62,112 @@ export async function postToReminders(user, body) {
   return result;
 }
 
-/**
- * Stops this device from receiving the signed-in account's reminders.
- * Best effort: always forgets the local token, even when the server cannot be reached.
- */
+function readPendingUnregister() {
+  const raw = localStorage.getItem(PENDING_UNREGISTER_KEY);
+  if (!raw) return null;
+
+  try {
+    const pending = JSON.parse(raw);
+
+    if (
+      typeof pending?.uid !== "string" ||
+      !pending.uid ||
+      typeof pending?.deviceToken !== "string" ||
+      !pending.deviceToken
+    ) {
+      localStorage.removeItem(PENDING_UNREGISTER_KEY);
+      return null;
+    }
+
+    return pending;
+  } catch {
+    localStorage.removeItem(PENDING_UNREGISTER_KEY);
+    return null;
+  }
+}
+
+const unregisterRequests = new Map();
+
+async function sendPendingUnregister(user, pending) {
+  const key = JSON.stringify([pending.uid, pending.deviceToken]);
+
+  if (unregisterRequests.has(key)) {
+    return unregisterRequests.get(key);
+  }
+
+  const request = (async () => {
+    try {
+      await postToReminders(user, {
+        action: "unregister",
+        deviceToken: pending.deviceToken,
+      });
+
+      const currentPending = readPendingUnregister();
+
+      if (
+        currentPending?.uid === pending.uid &&
+        currentPending?.deviceToken === pending.deviceToken
+      ) {
+        localStorage.removeItem(PENDING_UNREGISTER_KEY);
+      }
+
+      if (
+        localStorage.getItem(PUSH_TOKEN_KEY) === pending.deviceToken
+      ) {
+        localStorage.removeItem(PUSH_TOKEN_KEY);
+        localStorage.removeItem(REMINDER_SIGNATURE_KEY);
+      }
+
+      return true;
+    } catch (error) {
+      console.warn(
+        "HabitFlow: could not unregister this device from reminders.",
+        error,
+      );
+      return false;
+    }
+  })();
+
+  unregisterRequests.set(key, request);
+
+  try {
+    return await request;
+  } finally {
+    if (unregisterRequests.get(key) === request) {
+      unregisterRequests.delete(key);
+    }
+  }
+}
+
 export async function unregisterDevice(user) {
   const deviceToken = localStorage.getItem(PUSH_TOKEN_KEY);
-  localStorage.removeItem(PUSH_TOKEN_KEY);
-  localStorage.removeItem(REMINDER_SIGNATURE_KEY);
-  if (!user || !deviceToken) return false;
+
+  if (!user?.uid || !deviceToken) return false;
+
+  const pending = {
+    uid: user.uid,
+    deviceToken,
+  };
+
   try {
-    await postToReminders(user, { action: "unregister", deviceToken });
-    return true;
-  } catch (error) {
-    console.warn(
-      "HabitFlow: could not unregister this device from reminders.",
-      error,
+    localStorage.setItem(
+      PENDING_UNREGISTER_KEY,
+      JSON.stringify(pending),
     );
+  } catch (error) {
+    console.warn("HabitFlow: could not save pending unregister.", error);
     return false;
   }
+
+  return sendPendingUnregister(user, pending);
+}
+
+export async function retryPendingUnregister(user) {
+  if (!user?.uid) return false;
+
+  const pending = readPendingUnregister();
+
+  if (!pending || pending.uid !== user.uid) return false;
+
+  return sendPendingUnregister(user, pending);
 }
