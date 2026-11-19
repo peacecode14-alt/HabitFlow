@@ -1,0 +1,13 @@
+{
+  "name": "habitflow",
+  "version": "1.3.0",
+  "private": true,
+  "description": "Bilingual habit tracker (vanilla JS PWA)",
+  "scripts": {
+    "start": "node scripts/dev-server.mjs",
+    "sync-server": "node server/sync-server.js",
+    "test": "node test/storage-sync.test.mjs && node test/features.test.mjs && node test/multi-device-sync.test.mjs && node test/reminders.test.mjs && node --test test/reminder-pagination.test.mjs",
+    "test:e2e": "python3 test/e2e.py",
+    "test:cloud": "python3 test/cloud-e2e.py"
+  }
+}
