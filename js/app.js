@@ -559,7 +559,7 @@ async function syncRemindersToServer() {
       throw new Error("Reminder sync failed.");
     }
   } catch (error) {
-    // Automatic sync is silent; the next attempt can retry.
+    console.error("HabitFlow automatic reminder sync failed:", error);
   }
 }
 
