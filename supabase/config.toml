@@ -1,0 +1,9 @@
+# Edge Functions that authenticate callers themselves:
+#  - register-reminders verifies the Firebase ID token (signature, issuer, audience, email_verified);
+#  - send-due-reminders requires the CRON_SECRET bearer token.
+# Supabase's own JWT check is therefore turned off for them.
+[functions.register-reminders]
+verify_jwt = false
+
+[functions.send-due-reminders]
+verify_jwt = false
