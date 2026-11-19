@@ -139,8 +139,6 @@ async function sendToDevice(token: string, accessToken: string, body: string) {
   return { ok: false, invalidToken: unregistered };
 }
 
-const PAGE_SIZE = 500;
-
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return response({ error: "Method not allowed." }, 405);
 
@@ -169,34 +167,14 @@ Deno.serve(async (req: Request) => {
     let skipped = 0;
     let accessToken: string | null = null;
 
-    let lastId: string | null = null;
-
-    while (true) {
-      let query = admin
-        .from("reminder_schedules")
-        .select("id,firebase_uid,reminder_time,timezone,repeat_days,notification_body,updated_at")
-        .eq("enabled", true)
-        .order("id", { ascending: true })
-        .limit(PAGE_SIZE);
-
-      if (lastId !== null) {
-        query = query.gt("id", lastId);
-      }
-
-      const { data: schedules, error: schedulesError } = await query;
-
-      if (schedulesError) throw schedulesError;
-
-      if (!schedules?.length) break;
-
-      for (const schedule of schedules) {
+    await forEachSchedulePage(admin, async (schedule) => {
         let clock;
 
         try {
           clock = localClock(schedule.timezone);
         } catch {
           skipped++;
-          continue;
+          return;
         }
 
         const minutesLate =
@@ -209,7 +187,7 @@ Deno.serve(async (req: Request) => {
           !Array.isArray(schedule.repeat_days) ||
           !schedule.repeat_days.includes(clock.day)
         ) {
-          continue;
+          return;
         }
 
         if (
@@ -218,7 +196,7 @@ Deno.serve(async (req: Request) => {
             Date.now() - minutesLate * 60_000
         ) {
           skipped++;
-          continue;
+          return;
         }
 
         due++;
@@ -235,7 +213,7 @@ Deno.serve(async (req: Request) => {
 
         if (claimed !== true) {
           skipped++;
-          continue;
+          return;
         }
 
         const { data: devices, error: devicesError } = await admin
@@ -253,7 +231,7 @@ Deno.serve(async (req: Request) => {
             .eq("local_date", clock.date);
 
           failed++;
-          continue;
+          return;
         }
 
         if (!devices?.length) {
@@ -266,7 +244,7 @@ Deno.serve(async (req: Request) => {
             .eq("local_date", clock.date);
 
           failed++;
-          continue;
+          return;
         }
 
         if (!accessToken) {
@@ -323,12 +301,7 @@ Deno.serve(async (req: Request) => {
 
           failed++;
         }
-      }
-
-      lastId = schedules[schedules.length - 1].id;
-
-      if (schedules.length < PAGE_SIZE) break;
-    }
+    });
 
     return response({ ok: true, due, sent, failed, skipped });
   } catch (error) {
