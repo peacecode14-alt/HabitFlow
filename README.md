@@ -49,6 +49,6 @@ Browser tests need `pip install playwright && playwright install chromium`.
 
 - Habit data stays in the browser unless cloud sync is turned on.
 - Without a sync passphrase, habit names and notes are stored unencrypted in the cloud copy. Set a passphrase to encrypt
-  them before upload (use the same passphrase on every device; it is kept in the browser's local storage).
+  them before upload (use the same passphrase on every device; it is kept in memory only and is not stored in the browser's local storage).
 - Signing out can also remove HabitFlow data from the device, and "Delete cloud copy" removes the Firestore document.
 - Push notifications only contain generic text ("Time for your habit"), never habit names.
