@@ -63,44 +63,53 @@ await test("signature is stable, and changes with schedules, language, timezone,
     assert.notEqual(R.reminderSignature({ ...base, ...change }), sig);
 });
 
-await test("unregisterDevice forgets the local token even without a user, and calls the server when it can", async () => {
+await test("unregisterDevice keeps local data when no user is available", async () => {
   store.set(R.PUSH_TOKEN_KEY, "tok".repeat(10));
   store.set(R.REMINDER_SIGNATURE_KEY, "sig");
-  assert.equal(await R.unregisterDevice(null), false);
-  assert.equal(store.has(R.PUSH_TOKEN_KEY), false);
-  assert.equal(store.has(R.REMINDER_SIGNATURE_KEY), false);
 
-  const calls = [];
-  globalThis.fetch = async (url, init) => {
-    calls.push({ url, init });
-    return { ok: true, json: async () => ({ ok: true }) };
-  };
+  assert.equal(await R.unregisterDevice(null), false);
+
+  assert.equal(store.get(R.PUSH_TOKEN_KEY), "tok".repeat(10));
+  assert.equal(store.get(R.REMINDER_SIGNATURE_KEY), "sig");
+});
+
+await test("unregisterDevice keeps local token when the server is offline", async () => {
   store.set(R.PUSH_TOKEN_KEY, "tok".repeat(10));
-  assert.equal(
-    await R.unregisterDevice({ getIdToken: async () => "ID" }),
-    true,
-  );
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].init.headers.Authorization, "Bearer ID");
-  assert.deepEqual(JSON.parse(calls[0].init.body), {
-    action: "unregister",
-    deviceToken: "tok".repeat(10),
-  });
-  assert.equal(store.has(R.PUSH_TOKEN_KEY), false);
+  store.set(R.REMINDER_SIGNATURE_KEY, "sig");
 
   globalThis.fetch = async () => {
     throw new Error("offline");
   };
+
+  const result = await R.unregisterDevice({
+    uid: "user-1",
+    getIdToken: async () => "ID",
+  });
+
+  assert.equal(result, false);
+  assert.equal(store.get(R.PUSH_TOKEN_KEY), "tok".repeat(10));
+  assert.equal(store.get(R.REMINDER_SIGNATURE_KEY), "sig");
+});
+await test("unregisterDevice saves a pending request for the correct account", async () => {
   store.set(R.PUSH_TOKEN_KEY, "tok".repeat(10));
-  assert.equal(
-    await R.unregisterDevice({ getIdToken: async () => "ID" }),
-    false,
+
+  globalThis.fetch = async () => {
+    throw new Error("offline");
+  };
+
+  await R.unregisterDevice({
+    uid: "user-1",
+    getIdToken: async () => "ID",
+  });
+
+  const pending = JSON.parse(
+    store.get("habitflow_pending_unregister"),
   );
-  assert.equal(
-    store.has(R.PUSH_TOKEN_KEY),
-    false,
-    "local token is dropped even when the server is unreachable",
-  );
+
+  assert.deepEqual(pending, {
+    uid: "user-1",
+    deviceToken: "tok".repeat(10),
+  });
 });
 
 await test("app.js and auth.js never statically import the Firebase CDN or Firebase-backed modules", () => {
