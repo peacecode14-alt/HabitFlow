@@ -123,8 +123,14 @@ function loadSignedInProfile(user) {
   if (!currentUser) renderProfile();
   else renderProfile(currentUser.displayName || "", currentUser.email || "");
   renderSyncStatus();
-  if (currentUser && loadSyncConfig().enabled) runSync();
-  if (currentUser) scheduleReminderSync();
+  if (currentUser) {
+    if (navigator.onLine) {
+      retryPendingUnregister(currentUser);
+    }
+
+    if (loadSyncConfig().enabled) runSync();
+    scheduleReminderSync();
+  }
 }
 
 // Firebase is loaded lazily so the habit tracker keeps working if the CDN is unreachable (e.g. offline).
