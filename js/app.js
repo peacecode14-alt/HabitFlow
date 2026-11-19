@@ -47,6 +47,7 @@ import {
   reminderSignature,
   postToReminders,
   unregisterDevice,
+  retryPendingUnregister,
 } from "./services/reminders-server.js";
 import { parseBackup } from "./services/backup.js";
 import { TEMPLATES } from "./templates.js";
