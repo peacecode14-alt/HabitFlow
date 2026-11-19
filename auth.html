@@ -43,7 +43,13 @@
           <div id="confirmField" hidden><label for="confirmPassword" id="confirmLabel">Confirm password</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8"></div>
           <button class="primary-button auth-submit" type="submit" id="submitButton">Sign in</button>
         </form>
-        <div class="auth-links" id="authLinks"><button type="button" id="forgotButton">Forgot password?</button><a href="./index.html" class="auth-back" id="backLink">Back to HabitFlow</a></div>
+        <div class="auth-links" id="authLinks">
+          <button type="button" id="forgotButton">Forgot password?</button>
+          <button type="button" id="resendVerificationButton" hidden>
+            Resend verification email
+          </button>
+          <a href="./index.html" class="auth-back" id="backLink">Back to HabitFlow</a>
+        </div>
         <section id="recoveryPanel" hidden>
           <form class="auth-form" id="recoveryForm">
             <label for="newPassword" id="newPasswordLabel">New password</label>
